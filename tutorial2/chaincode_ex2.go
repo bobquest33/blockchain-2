@@ -34,14 +34,27 @@ import (
 type SimpleChaincode struct {
 }
 
+var productIndexStr = "_productindex"
 var marbleIndexStr = "_marbleindex"				//name for the key/value that will store a list of all known marbles
 var openTradesStr = "_opentrades"				//name for the key/value that will store all open trades
+
+type Product struct{
+	Name string `json:"name"`					//the fieldtags are needed to keep case from bouncing around
+	Type string `json:"type"`
+	Amount int `json:"amount"`
+	User string `json:"user"`
+}
 
 type Marble struct{
 	Name string `json:"name"`					//the fieldtags are needed to keep case from bouncing around
 	Color string `json:"color"`
 	Size int `json:"size"`
 	User string `json:"user"`
+}
+
+type Description2 struct{
+	Type string `json:"type"`
+	Amount int `json:"amount"`
 }
 
 type Description struct{
@@ -52,8 +65,8 @@ type Description struct{
 type AnOpenTrade struct{
 	User string `json:"user"`					//user who created the open trade order
 	Timestamp int64 `json:"timestamp"`			//utc timestamp of creation
-	Want Description  `json:"want"`				//description of desired marble
-	Willing []Description `json:"willing"`		//array of marbles willing to trade away
+	Want Description2  `json:"want"`				//description of desired marble
+	Willing []Description2 `json:"willing"`		//array of marbles willing to trade away
 }
 
 type AllTrades struct{
@@ -90,6 +103,16 @@ func (t *SimpleChaincode) init(stub *shim.ChaincodeStub, args []string) ([]byte,
 		return nil, err
 	}
 	
+	// init productIndexStr
+	
+	var empty2 []string
+	jsonAsBytes2, _ := json.Marshal(empty2)
+	err = stub.PutState(productIndexStr, jsonAsBytes2)
+	if err != nil {
+		return nil, err
+	}
+	
+
 	var trades AllTrades
 	jsonAsBytes, _ = json.Marshal(trades)								//clear the open trade struct
 	err = stub.PutState(openTradesStr, jsonAsBytes)
@@ -117,6 +140,8 @@ func (t *SimpleChaincode) Run(stub *shim.ChaincodeStub, function string, args []
 		return t.Write(stub, args)
 	} else if function == "init_marble" {									//create a new marble
 		return t.init_marble(stub, args)
+	} else if function == "init_product" {									//create a new marble
+		return t.init_product(stub, args)
 	} else if function == "set_user" {										//change owner of a marble
 		res, err := t.set_user(stub, args)
 		cleanTrades(stub)													//lets make sure all open trades are still valid
@@ -171,6 +196,31 @@ func (t *SimpleChaincode) Delete(stub *shim.ChaincodeStub, args []string) ([]byt
 	}
 	jsonAsBytes, _ := json.Marshal(marbleIndex)									//save new index
 	err = stub.PutState(marbleIndexStr, jsonAsBytes)
+
+
+		//get the product index
+	productsAsBytes, err := stub.GetState(productIndexStr)
+	if err != nil {
+		return nil, errors.New("Failed to get product index")
+	}
+	var productIndex []string
+	json.Unmarshal(productsAsBytes, &productIndex)								//un stringify it aka JSON.parse()
+	
+	//remove product from index
+	for i,val := range productIndex{
+		fmt.Println(strconv.Itoa(i) + " - looking at " + val + " for " + name)
+		if val == name{															//find the correct marble
+			fmt.Println("found product")
+			productIndex = append(productIndex[:i], productIndex[i+1:]...)			//remove it
+			for x:= range productIndex{											//debug prints...
+				fmt.Println(string(x) + " - " + productIndex[x])
+			}
+			break
+		}
+	}
+	jsonAsBytes2, _ := json.Marshal(productIndex)									//save new index
+	err = stub.PutState(productIndexStr, jsonAsBytes2)
+
 	return nil, nil
 }
 
@@ -285,6 +335,64 @@ func (t *SimpleChaincode) init_marble(stub *shim.ChaincodeStub, args []string) (
 }
 
 // ============================================================================================================================
+// Init Product - create a new product, store into chaincode state
+// ============================================================================================================================
+func (t *SimpleChaincode) init_product(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+	var err error
+
+	//   0       1       2     3
+	// "Schengen", "visa", "60", "marc"
+	if len(args) != 4 {
+		return nil, errors.New("Incorrect number of arguments. Expecting 4")
+	}
+
+	fmt.Println("- start init product")
+	if len(args[0]) <= 0 {
+		return nil, errors.New("1st argument must be a non-empty string")
+	}
+	if len(args[1]) <= 0 {
+		return nil, errors.New("2nd argument must be a non-empty string")
+	}
+	if len(args[2]) <= 0 {
+		return nil, errors.New("3rd argument must be a non-empty string")
+	}
+	if len(args[3]) <= 0 {
+		return nil, errors.New("4th argument must be a non-empty string")
+	}
+	
+	size, err := strconv.Atoi(args[2])
+	if err != nil {
+		return nil, errors.New("3rd argument must be a numeric string")
+	}
+	
+	type1 := strings.ToLower(args[1])
+	user := strings.ToLower(args[3])
+
+	str := `{"name": "` + args[0] + `", "type": "` + type1 + `", "amount": ` + strconv.Itoa(size) + `, "user": "` + user + `"}`
+	err = stub.PutState(args[0], []byte(str))								//store marble with id as key
+	if err != nil {
+		return nil, err
+	}
+		
+	//get the marble index
+	productsAsBytes, err := stub.GetState(productIndexStr)
+	if err != nil {
+		return nil, errors.New("Failed to get product index")
+	}
+	var productIndex []string
+	json.Unmarshal(productsAsBytes, &productIndex)							//un stringify it aka JSON.parse()
+	
+	//append
+	productIndex = append(productIndex, args[0])								//add marble name to index list
+	fmt.Println("! product index: ", productIndex)
+	jsonAsBytes, _ := json.Marshal(productIndex)
+	err = stub.PutState(productIndexStr, jsonAsBytes)						//store name of marble
+
+	fmt.Println("- end init product")
+	return nil, nil
+}
+
+// ============================================================================================================================
 // Set User Permission on Marble
 // ============================================================================================================================
 func (t *SimpleChaincode) set_user(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
@@ -322,7 +430,7 @@ func (t *SimpleChaincode) set_user(stub *shim.ChaincodeStub, args []string) ([]b
 func (t *SimpleChaincode) open_trade(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	var err error
 	var will_size int
-	var trade_away Description
+	var trade_away Description2
 	
 	//	0        1      2     3      4      5       6
 	//["bob", "blue", "16", "red", "16"] *"blue", "35*
@@ -341,8 +449,8 @@ func (t *SimpleChaincode) open_trade(stub *shim.ChaincodeStub, args []string) ([
 	open := AnOpenTrade{}
 	open.User = args[0]
 	open.Timestamp = makeTimestamp()											//use timestamp as an ID
-	open.Want.Color = args[1]
-	open.Want.Size =  size1
+	open.Want.Type = args[1]
+	open.Want.Amount =  size1
 	fmt.Println("- start open trade")
 	jsonAsBytes, _ := json.Marshal(open)
 	err = stub.PutState("_debug1", jsonAsBytes)
@@ -355,9 +463,9 @@ func (t *SimpleChaincode) open_trade(stub *shim.ChaincodeStub, args []string) ([
 			return nil, errors.New(msg)
 		}
 		
-		trade_away = Description{}
-		trade_away.Color = args[i]
-		trade_away.Size =  will_size
+		trade_away = Description2{}
+		trade_away.Type = args[i]
+		trade_away.Amount =  will_size
 		fmt.Println("! created trade_away: " + args[i])
 		jsonAsBytes, _ = json.Marshal(trade_away)
 		err = stub.PutState("_debug2", jsonAsBytes)
@@ -482,6 +590,46 @@ func findMarble4Trade(stub *shim.ChaincodeStub, user string, color string, size 
 }
 
 // ============================================================================================================================
+// findProduct4Trade - look for a matching product that this user owns and return it
+// ============================================================================================================================
+func findProduct4Trade(stub *shim.ChaincodeStub, user string, type1 string, amount int )(p Product, err error){
+	var fail Product;
+	fmt.Println("- start find product 4 trade")
+	fmt.Println("looking for " + user + ", " + type1 + ", " + strconv.Itoa(amount));
+
+	//get the product index
+	productsAsBytes, err := stub.GetState(productIndexStr)
+	if err != nil {
+		return fail, errors.New("Failed to get product index")
+	}
+	var productIndex []string
+	json.Unmarshal(productsAsBytes, &productIndex)								//un stringify it aka JSON.parse()
+	
+	for i:= range productIndex{													//iter through all the products
+		//fmt.Println("looking @ product name: " + productIndex[i]);
+
+		productAsBytes, err := stub.GetState(productIndex[i])						//grab this product
+		if err != nil {
+			return fail, errors.New("Failed to get product")
+		}
+		res := Product{}
+		json.Unmarshal(productAsBytes, &res)										//un stringify it aka JSON.parse()
+		//fmt.Println("looking @ " + res.User + ", " + res.Color + ", " + strconv.Itoa(res.Size));
+		
+		//check for user && type && amount
+		if strings.ToLower(res.User) == strings.ToLower(user) && strings.ToLower(res.Type) == strings.ToLower(type1) && res.Amount == amount{
+			fmt.Println("found a product: " + res.Name)
+			fmt.Println("! end find product 4 trade")
+			return res, nil
+		}
+	}
+	
+	fmt.Println("- end find product 4 trade - error")
+	return fail, errors.New("Did not find product to use in this trade")
+}
+
+
+// ============================================================================================================================
 // Make Timestamp - create a timestamp in ms
 // ============================================================================================================================
 func makeTimestamp() int64 {
@@ -554,7 +702,7 @@ func cleanTrades(stub *shim.ChaincodeStub)(err error){
 		fmt.Println("# options " + strconv.Itoa(len(trades.OpenTrades[i].Willing)))
 		for x:=0; x<len(trades.OpenTrades[i].Willing); {														//find a marble that is suitable
 			fmt.Println("! on next option " + strconv.Itoa(i) + ":" + strconv.Itoa(x))
-			_, e := findMarble4Trade(stub, trades.OpenTrades[i].User, trades.OpenTrades[i].Willing[x].Color, trades.OpenTrades[i].Willing[x].Size)
+			_, e := findMarble4Trade(stub, trades.OpenTrades[i].User, trades.OpenTrades[i].Willing[x].Type, trades.OpenTrades[i].Willing[x].Amount)
 			if(e != nil){
 				fmt.Println("! errors with this option, removing option")
 				didWork = true
