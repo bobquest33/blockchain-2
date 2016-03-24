@@ -374,7 +374,7 @@ func (t *SimpleChaincode) init_product(stub *shim.ChaincodeStub, args []string) 
 		return nil, err
 	}
 		
-	//get the marble index
+	//get the product index
 	productsAsBytes, err := stub.GetState(productIndexStr)
 	if err != nil {
 		return nil, errors.New("Failed to get product index")
@@ -406,12 +406,12 @@ func (t *SimpleChaincode) set_user(stub *shim.ChaincodeStub, args []string) ([]b
 	
 	fmt.Println("- start set user")
 	fmt.Println(args[0] + " - " + args[1])
-	marbleAsBytes, err := stub.GetState(args[0])
+	productAsBytes, err := stub.GetState(args[0])
 	if err != nil {
 		return nil, errors.New("Failed to get thing")
 	}
-	res := Marble{}
-	json.Unmarshal(marbleAsBytes, &res)										//un stringify it aka JSON.parse()
+	res := Product{}
+	json.Unmarshal(productAsBytes, &res)										//un stringify it aka JSON.parse()
 	res.User = args[1]														//change the user
 	
 	jsonAsBytes, _ := json.Marshal(res)
@@ -550,44 +550,6 @@ func (t *SimpleChaincode) perform_trade(stub *shim.ChaincodeStub, args []string)
 	return nil, nil
 }
 
-// ============================================================================================================================
-// findMarble4Trade - look for a matching marble that this user owns and return it
-// ============================================================================================================================
-func findMarble4Trade(stub *shim.ChaincodeStub, user string, color string, size int )(m Marble, err error){
-	var fail Marble;
-	fmt.Println("- start find marble 4 trade")
-	fmt.Println("looking for " + user + ", " + color + ", " + strconv.Itoa(size));
-
-	//get the marble index
-	marblesAsBytes, err := stub.GetState(marbleIndexStr)
-	if err != nil {
-		return fail, errors.New("Failed to get marble index")
-	}
-	var marbleIndex []string
-	json.Unmarshal(marblesAsBytes, &marbleIndex)								//un stringify it aka JSON.parse()
-	
-	for i:= range marbleIndex{													//iter through all the marbles
-		//fmt.Println("looking @ marble name: " + marbleIndex[i]);
-
-		marbleAsBytes, err := stub.GetState(marbleIndex[i])						//grab this marble
-		if err != nil {
-			return fail, errors.New("Failed to get marble")
-		}
-		res := Marble{}
-		json.Unmarshal(marbleAsBytes, &res)										//un stringify it aka JSON.parse()
-		//fmt.Println("looking @ " + res.User + ", " + res.Color + ", " + strconv.Itoa(res.Size));
-		
-		//check for user && color && size
-		if strings.ToLower(res.User) == strings.ToLower(user) && strings.ToLower(res.Color) == strings.ToLower(color) && res.Size == size{
-			fmt.Println("found a marble: " + res.Name)
-			fmt.Println("! end find marble 4 trade")
-			return res, nil
-		}
-	}
-	
-	fmt.Println("- end find marble 4 trade - error")
-	return fail, errors.New("Did not find marble to use in this trade")
-}
 
 // ============================================================================================================================
 // findProduct4Trade - look for a matching product that this user owns and return it
