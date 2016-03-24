@@ -530,7 +530,7 @@ func (t *SimpleChaincode) perform_trade(stub *shim.ChaincodeStub, args []string)
 		if trades.OpenTrades[i].Timestamp == timestamp{
 			fmt.Println("found the trade");
 			
-			marble, e := findMarble4Trade(stub, trades.OpenTrades[i].User, args[4], size)					//find a marble that is suitable from opener
+			marble, e := findProduct4Trade(stub, trades.OpenTrades[i].User, args[4], size)					//find a marble that is suitable from opener
 			if(e == nil){
 				fmt.Println("! no errors, proceeding")
 
@@ -664,7 +664,7 @@ func cleanTrades(stub *shim.ChaincodeStub)(err error){
 		fmt.Println("# options " + strconv.Itoa(len(trades.OpenTrades[i].Willing)))
 		for x:=0; x<len(trades.OpenTrades[i].Willing); {														//find a marble that is suitable
 			fmt.Println("! on next option " + strconv.Itoa(i) + ":" + strconv.Itoa(x))
-			_, e := findMarble4Trade(stub, trades.OpenTrades[i].User, trades.OpenTrades[i].Willing[x].Type, trades.OpenTrades[i].Willing[x].Amount)
+			_, e := findProduct4Trade(stub, trades.OpenTrades[i].User, trades.OpenTrades[i].Willing[x].Type, trades.OpenTrades[i].Willing[x].Amount)
 			if(e != nil){
 				fmt.Println("! errors with this option, removing option")
 				didWork = true
