@@ -43,6 +43,8 @@ type Product struct{
 	Type string `json:"type"`
 	Amount int `json:"amount"`
 	User string `json:"user"`
+	Color string `json:"color"`
+	Size int `json:"size"`
 }
 
 type Marble struct{
@@ -55,6 +57,8 @@ type Marble struct{
 type Description2 struct{
 	Type string `json:"type"`
 	Amount int `json:"amount"`
+	Color string `json:"color"`
+	Size int `json:"size"`
 }
 
 type Description struct{
@@ -276,63 +280,6 @@ func (t *SimpleChaincode) Write(stub *shim.ChaincodeStub, args []string) ([]byte
 	return nil, nil
 }
 
-// ============================================================================================================================
-// Init Marble - create a new marble, store into chaincode state
-// ============================================================================================================================
-func (t *SimpleChaincode) init_marble(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
-	var err error
-
-	//   0       1       2     3
-	// "asdf", "blue", "35", "bob"
-	if len(args) != 4 {
-		return nil, errors.New("Incorrect number of arguments. Expecting 4")
-	}
-
-	fmt.Println("- start init marble")
-	if len(args[0]) <= 0 {
-		return nil, errors.New("1st argument must be a non-empty string")
-	}
-	if len(args[1]) <= 0 {
-		return nil, errors.New("2nd argument must be a non-empty string")
-	}
-	if len(args[2]) <= 0 {
-		return nil, errors.New("3rd argument must be a non-empty string")
-	}
-	if len(args[3]) <= 0 {
-		return nil, errors.New("4th argument must be a non-empty string")
-	}
-	
-	size, err := strconv.Atoi(args[2])
-	if err != nil {
-		return nil, errors.New("3rd argument must be a numeric string")
-	}
-	
-	color := strings.ToLower(args[1])
-	user := strings.ToLower(args[3])
-
-	str := `{"name": "` + args[0] + `", "color": "` + color + `", "size": ` + strconv.Itoa(size) + `, "user": "` + user + `"}`
-	err = stub.PutState(args[0], []byte(str))								//store marble with id as key
-	if err != nil {
-		return nil, err
-	}
-		
-	//get the marble index
-	marblesAsBytes, err := stub.GetState(marbleIndexStr)
-	if err != nil {
-		return nil, errors.New("Failed to get marble index")
-	}
-	var marbleIndex []string
-	json.Unmarshal(marblesAsBytes, &marbleIndex)							//un stringify it aka JSON.parse()
-	
-	//append
-	marbleIndex = append(marbleIndex, args[0])								//add marble name to index list
-	fmt.Println("! marble index: ", marbleIndex)
-	jsonAsBytes, _ := json.Marshal(marbleIndex)
-	err = stub.PutState(marbleIndexStr, jsonAsBytes)						//store name of marble
-
-	fmt.Println("- end init marble")
-	return nil, nil
-}
 
 // ============================================================================================================================
 // Init Product - create a new product, store into chaincode state
@@ -342,9 +289,6 @@ func (t *SimpleChaincode) init_product(stub *shim.ChaincodeStub, args []string) 
 
 	//   0       1       2     3
 	// "Schengen", "visa", "60", "marc"
-	if len(args) != 4 {
-		return nil, errors.New("Incorrect number of arguments. Expecting 4")
-	}
 
 	fmt.Println("- start init product")
 	if len(args[0]) <= 0 {
@@ -368,7 +312,7 @@ func (t *SimpleChaincode) init_product(stub *shim.ChaincodeStub, args []string) 
 	type1 := strings.ToLower(args[1])
 	user := strings.ToLower(args[3])
 
-	str := `{"name": "` + args[0] + `", "type": "` + type1 + `", "amount": ` + strconv.Itoa(size) + `, "user": "` + user + `"}`
+	str := `{"name": "` + args[0] + `", "type": "` + type1 + `", "amount": ` + strconv.Itoa(amount) + `, "user": "` + user + `"}`
 	err = stub.PutState(args[0], []byte(str))								//store marble with id as key
 	if err != nil {
 		return nil, err
