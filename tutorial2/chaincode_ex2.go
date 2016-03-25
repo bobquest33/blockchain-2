@@ -142,8 +142,6 @@ func (t *SimpleChaincode) Run(stub *shim.ChaincodeStub, function string, args []
 		return res, err
 	} else if function == "write" {											//writes a value to the chaincode state
 		return t.Write(stub, args)
-	} else if function == "init_marble" {									//create a new marble
-		return t.init_marble(stub, args)
 	} else if function == "init_product" {									//create a new marble
 		return t.init_product(stub, args)
 	} else if function == "set_user" {										//change owner of a marble
@@ -304,12 +302,13 @@ func (t *SimpleChaincode) init_product(stub *shim.ChaincodeStub, args []string) 
 		return nil, errors.New("4th argument must be a non-empty string")
 	}
 	
-	size, err := strconv.Atoi(args[2])
+	amount, err := strconv.Atoi(args[2])
 	if err != nil {
 		return nil, errors.New("3rd argument must be a numeric string")
 	}
 	
 	type1 := strings.ToLower(args[1])
+	
 	user := strings.ToLower(args[3])
 
 	str := `{"name": "` + args[0] + `", "type": "` + type1 + `", "amount": ` + strconv.Itoa(amount) + `, "user": "` + user + `"}`
