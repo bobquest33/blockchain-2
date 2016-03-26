@@ -314,7 +314,8 @@ func (t *SimpleChaincode) init_product(stub *shim.ChaincodeStub, args []string) 
 	color := strings.ToLower(args[4])
 	user := strings.ToLower(args[3])
 
-	str := `{"name": "` + args[0] + `", "color": "` + color + `", "size": ` + strconv.Itoa(size) + `, "type": "` + type1 + `", "amount": ` + strconv.Itoa(amount) + `, "user": "` + user + `"}`
+	str := `{"name": "` + args[0] + `", "type": "` + type1 + `", "amount": ` + strconv.Itoa(amount) 
+	+ `, "user": "` + user + `" , "color": "` + color + `", "size": ` + strconv.Itoa(size) + `}`
 	err = stub.PutState(args[0], []byte(str))								//store marble with id as key
 	if err != nil {
 		return nil, err
