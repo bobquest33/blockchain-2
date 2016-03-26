@@ -302,21 +302,21 @@ func (t *SimpleChaincode) init_product(stub *shim.ChaincodeStub, args []string) 
 		return nil, errors.New("4th argument must be a non-empty string")
 	}
 	
-	/*
+	
 	amount, err := strconv.Atoi(args[2])
 	if err != nil {
 		return nil, errors.New("3rd argument must be a numeric string")
 	}
-	*/
+	
 	size, err := strconv.Atoi(args[5])
 	if err != nil {
 		return nil, errors.New("5th argument must be a numeric string")
 	}
-	//type1 := strings.ToLower(args[1])
+	type1 := strings.ToLower(args[1])
 	color := strings.ToLower(args[4])
 	user := strings.ToLower(args[3])
 
-	str := `{"name": "` + args[0] + `", "color": "` + color + `", "size": ` + strconv.Itoa(size) + `, "user": "` + user + `"}`
+	str := `{"name": "` + args[0] + `", "color": "` + color + `", "size": ` + strconv.Itoa(size) + `", "amount": ` + strconv.Itoa(amount) + `, "type": "` + type1 + `, "user": "` + user + `"}`
 	//str := `{"name": "` + args[0] + `", "type": "` + type1 + `", "amount": ` + strconv.Itoa(amount) + `", "user": "` + user + `" , "color": "` + color + `", "size": ` + strconv.Itoa(size) + `"}`
 	err = stub.PutState(args[0], []byte(str))								//store marble with id as key
 	if err != nil {
